@@ -40,6 +40,7 @@ jobs:
             # Volume nomme pour persister data/links.json entre deploiements
             docker volume inspect shareurl-data >/dev/null 2>&1 || docker volume create shareurl-data
             docker run -d --name shareurl --network shareurl-network -p 3001:3001 \
+              -e PORT=3001 \
               -e APP_PASSWORD=${{ secrets.APP_PASSWORD }} \
               -e COOKIE_SECURE=${{ vars.COOKIE_SECURE }} \
               -v shareurl-data:/app/data \
