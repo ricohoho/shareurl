@@ -19,7 +19,7 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 
 function normalizeUrl(input) {
   const trimmed = (input || '').trim();
-  if (!trimmed) return { error: "L'URL ne peut pas etre vide." };
+  if (!trimmed) return { url: null };
 
   const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
 
@@ -162,10 +162,27 @@ async function handleRequest(req, res) {
       return;
     }
 
-    const uploadedFile = files.file;
-    const fileInfo = uploadedFile && uploadedFile.data.length > 0 ? store.saveUploadedFile(uploadedFile) : null;
+    const uploadedFile = files.file && files.file.data.length > 0 ? files.file : null;
 
-    store.addLink({ title: titleResult.title, url: result.url, file: fileInfo });
+    if (!result.url && !uploadedFile) {
+      sendHtml(res, 400, templates.addPage({
+        error: 'Veuillez indiquer une URL ou joindre un fichier.',
+        title: titleResult.title,
+        url: fields.url,
+      }));
+      return;
+    }
+
+    const fileInfo = uploadedFile ? store.saveUploadedFile(uploadedFile) : null;
+
+    // Si l'utilisateur n'a pas saisi de titre (JS desactive ou navigateur sans support),
+    // on le deduit du nom de fichier cote serveur, en repli du script sur /add.
+    let finalTitle = titleResult.title;
+    if (!finalTitle && uploadedFile) {
+      finalTitle = path.basename(uploadedFile.filename, path.extname(uploadedFile.filename)).slice(0, 50);
+    }
+
+    store.addLink({ title: finalTitle, url: result.url, file: fileInfo });
     redirect(res, '/');
     return;
   }

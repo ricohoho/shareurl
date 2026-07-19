@@ -58,10 +58,13 @@ function listPage(links) {
         const fileHtml = link.file
           ? `<a class="download-link" href="/links/${encodeURIComponent(link.id)}/download">Telecharger : ${escapeHtml(link.file.originalName)}</a>`
           : '';
+        const urlHtml = link.url
+          ? `<a class="link-url" href="${escapeHtml(link.url)}">${escapeHtml(link.url)}</a>`
+          : '';
         return `
   <li class="link-row">
     ${titleHtml}
-    <a class="link-url" href="${escapeHtml(link.url)}">${escapeHtml(link.url)}</a>
+    ${urlHtml}
     <div class="link-meta">
       <span class="link-date">${formatDate(link.createdAt)}</span>
       ${fileHtml}
@@ -95,24 +98,40 @@ function addPage(opts = {}) {
   <h1>Ajouter un lien</h1>
   ${errorHtml}
   <form method="POST" action="/add" enctype="multipart/form-data">
-    <label for="titre">Titre (facultatif, 50 caracteres max)</label>
-    <input type="text" id="titre" name="titre" maxlength="50" value="${escapeHtml(title || '')}" autofocus>
-
-    <label for="url">URL</label>
-    <input type="text" id="url" name="url" value="${escapeHtml(url || '')}">
-
     <label for="file">Fichier joint (facultatif)</label>
-    <input type="file" id="file" name="file">
+    <input type="file" id="file" name="file" autofocus>
+
+    <label for="titre">Titre (facultatif, 50 caracteres max)</label>
+    <input type="text" id="titre" name="titre" maxlength="50" value="${escapeHtml(title || '')}">
+
+    <label for="url">URL (facultatif)</label>
+    <input type="text" id="url" name="url" value="${escapeHtml(url || '')}">
 
     <input type="submit" value="Valider">
   </form>
   <p><a href="/">Retour a la liste</a></p>
 </div>
+<script>
+(function () {
+  var fileInput = document.getElementById('file');
+  var titleInput = document.getElementById('titre');
+  if (!fileInput || !titleInput) return;
+  fileInput.addEventListener('change', function () {
+    if (titleInput.value.trim() !== '') return;
+    var file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    var dotIndex = file.name.lastIndexOf('.');
+    var base = dotIndex > 0 ? file.name.slice(0, dotIndex) : file.name;
+    titleInput.value = base.slice(0, 50);
+  });
+})();
+</script>
 `);
 }
 
 function deleteConfirmPage(link) {
   const titleHtml = link.title ? `<p class="link-title">${escapeHtml(link.title)}</p>` : '';
+  const urlHtml = link.url ? `<p class="link-url">${escapeHtml(link.url)}</p>` : '';
   const fileHtml = link.file
     ? `<p>Le fichier joint (${escapeHtml(link.file.originalName)}) sera egalement supprime.</p>`
     : '';
@@ -120,7 +139,7 @@ function deleteConfirmPage(link) {
 <div class="container">
   <h1>Supprimer ce lien ?</h1>
   ${titleHtml}
-  <p class="link-url">${escapeHtml(link.url)}</p>
+  ${urlHtml}
   ${fileHtml}
   <form method="POST" action="/links/${encodeURIComponent(link.id)}/delete">
     <input type="submit" value="Confirmer la suppression">
