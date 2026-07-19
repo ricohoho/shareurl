@@ -8,6 +8,7 @@ const { parseCookies, readFormBody } = require('./src/http-helpers');
 const auth = require('./src/auth');
 const store = require('./src/store');
 const templates = require('./src/templates');
+const pearltrees = require('./src/pearltrees');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
@@ -117,7 +118,16 @@ async function handleRequest(req, res) {
       sendHtml(res, 400, templates.addPage(result.error, fields.url));
       return;
     }
-    store.addLink(result.url);
+    let urlToStore = result.url;
+    if (pearltrees.isPearltreesUrl(urlToStore)) {
+      try {
+        urlToStore = await pearltrees.resolveDownloadUrl(urlToStore);
+      } catch (err) {
+        sendHtml(res, 400, templates.addPage(err.message, fields.url));
+        return;
+      }
+    }
+    store.addLink(urlToStore);
     redirect(res, '/');
     return;
   }
