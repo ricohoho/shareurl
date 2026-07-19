@@ -1,0 +1,46 @@
+name: ShareURL CI/CD runner
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: shareurl # Specifiez l'environnement ici
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t ghcr.io/ricohoho/shareurl:latest .
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ricohoho --password-stdin
+
+      - name: Push Docker image
+        run: docker push ghcr.io/ricohoho/shareurl:latest
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.SERVER_IP }}
+          username: ${{ vars.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ricohoho --password-stdin
+            docker pull ghcr.io/ricohoho/shareurl:latest
+            docker stop shareurl || true
+            docker rm shareurl || true
+            # Reseau dedie a ShareURL, pour un reverse-proxy eventuel
+            docker network inspect shareurl-network >/dev/null 2>&1 || docker network create shareurl-network
+            # Volume nomme pour persister data/links.json entre deploiements
+            docker volume inspect shareurl-data >/dev/null 2>&1 || docker volume create shareurl-data
+            docker run -d --name shareurl --network shareurl-network -p 3000:3000 \
+              -e APP_PASSWORD=${{ secrets.APP_PASSWORD }} \
+              -e COOKIE_SECURE=${{ vars.COOKIE_SECURE }} \
+              -v shareurl-data:/app/data \
+              ghcr.io/ricohoho/shareurl:latest
