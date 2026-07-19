@@ -114,9 +114,22 @@ async function readMultipartBody(req, maxBytes, contentType) {
   return parseMultipart(buffer, contentType);
 }
 
+// Les en-tetes HTTP n'acceptent que du Latin-1 imprimable : un nom de fichier avec un accent,
+// une apostrophe typographique ou un tiret cadratin (ex: "Le mariage parfait – tome 2.epub")
+// fait planter res.writeHead (ERR_INVALID_CHAR) s'il est passe tel quel. On fournit un
+// fallback ASCII pour filename=, et le nom complet encode pour filename*= (RFC 5987/6266),
+// que la plupart des navigateurs recents utilisent en priorite.
+function contentDispositionHeader(originalName) {
+  const cleaned = originalName.replace(/[\r\n]/g, '');
+  const asciiFallback = cleaned.replace(/[^\x20-\x7e]/g, '_').replace(/"/g, "'") || 'fichier';
+  const encoded = encodeURIComponent(cleaned);
+  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encoded}`;
+}
+
 module.exports = {
   PayloadTooLargeError,
   parseCookies,
   readFormBody,
   readMultipartBody,
+  contentDispositionHeader,
 };

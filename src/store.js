@@ -37,10 +37,16 @@ function saveUploadedFile(uploadedFile) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   const storedName = `${crypto.randomUUID()}${path.extname(uploadedFile.filename)}`;
   fs.writeFileSync(path.join(UPLOADS_DIR, storedName), uploadedFile.data);
+  // Un Content-Type non conforme (caracteres hors ASCII imprimable) ferait planter
+  // res.writeHead au telechargement : on se rabat sur un type generique dans ce cas.
+  const contentType = /^[\x20-\x7e]+$/.test(uploadedFile.contentType || '')
+    ? uploadedFile.contentType
+    : 'application/octet-stream';
+
   return {
     storedName,
     originalName: uploadedFile.filename,
-    contentType: uploadedFile.contentType || 'application/octet-stream',
+    contentType,
     size: uploadedFile.data.length,
   };
 }

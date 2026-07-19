@@ -4,7 +4,13 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { PORT, MAX_UPLOAD_MB, MAX_UPLOAD_BYTES } = require('./src/config');
-const { parseCookies, readFormBody, readMultipartBody, PayloadTooLargeError } = require('./src/http-helpers');
+const {
+  parseCookies,
+  readFormBody,
+  readMultipartBody,
+  PayloadTooLargeError,
+  contentDispositionHeader,
+} = require('./src/http-helpers');
 const auth = require('./src/auth');
 const store = require('./src/store');
 const templates = require('./src/templates');
@@ -199,10 +205,9 @@ async function handleRequest(req, res) {
       res.end('Fichier introuvable');
       return;
     }
-    const safeName = link.file.originalName.replace(/[\r\n"]/g, '');
     res.writeHead(200, {
       'Content-Type': link.file.contentType,
-      'Content-Disposition': `attachment; filename="${safeName}"`,
+      'Content-Disposition': contentDispositionHeader(link.file.originalName),
       'Content-Length': link.file.size,
     });
     fs.createReadStream(filePath).pipe(res);
