@@ -3,12 +3,11 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { PORT } = require('./src/config');
-const { parseCookies, readFormBody } = require('./src/http-helpers');
+const { PORT, MAX_UPLOAD_MB, MAX_UPLOAD_BYTES } = require('./src/config');
+const { parseCookies, readFormBody, readMultipartBody, PayloadTooLargeError } = require('./src/http-helpers');
 const auth = require('./src/auth');
 const store = require('./src/store');
 const templates = require('./src/templates');
-const pearltrees = require('./src/pearltrees');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
@@ -30,6 +29,14 @@ function normalizeUrl(input) {
   }
 
   return { url: parsed.toString() };
+}
+
+function normalizeTitle(input) {
+  const trimmed = (input || '').trim();
+  if (trimmed.length > 50) {
+    return { error: 'Le titre ne peut pas depasser 50 caracteres.' };
+  }
+  return { title: trimmed };
 }
 
 function getSessionToken(req) {
@@ -112,22 +119,47 @@ async function handleRequest(req, res) {
   }
 
   if (method === 'POST' && pathname === '/add') {
-    const fields = await readFormBody(req);
-    const result = normalizeUrl(fields.url);
-    if (result.error) {
-      sendHtml(res, 400, templates.addPage(result.error, fields.url));
+    const contentType = req.headers['content-type'] || '';
+    const contentLength = parseInt(req.headers['content-length'] || '0', 10);
+    const tooLargeMessage = `Le fichier depasse la taille maximale autorisee (${MAX_UPLOAD_MB} Mo).`;
+
+    if (contentLength > MAX_UPLOAD_BYTES) {
+      // Rejet immediat sans lire le corps : evite de faire transiter un gros fichier pour rien.
+      req.resume();
+      sendHtml(res, 413, templates.addPage({ error: tooLargeMessage }), { Connection: 'close' });
       return;
     }
-    let urlToStore = result.url;
-    if (pearltrees.isPearltreesUrl(urlToStore)) {
-      try {
-        urlToStore = await pearltrees.resolveDownloadUrl(urlToStore);
-      } catch (err) {
-        sendHtml(res, 400, templates.addPage(err.message, fields.url));
-        return;
+
+    let fields = {};
+    let files = {};
+    try {
+      if (contentType.startsWith('multipart/form-data')) {
+        ({ fields, files } = await readMultipartBody(req, MAX_UPLOAD_BYTES, contentType));
+      } else {
+        fields = await readFormBody(req);
       }
+    } catch (err) {
+      const message = err instanceof PayloadTooLargeError ? tooLargeMessage : 'Requete invalide.';
+      sendHtml(res, 400, templates.addPage({ error: message }), { Connection: 'close' });
+      return;
     }
-    store.addLink(urlToStore);
+
+    const titleResult = normalizeTitle(fields.titre);
+    if (titleResult.error) {
+      sendHtml(res, 400, templates.addPage({ error: titleResult.error, url: fields.url }));
+      return;
+    }
+
+    const result = normalizeUrl(fields.url);
+    if (result.error) {
+      sendHtml(res, 400, templates.addPage({ error: result.error, title: titleResult.title, url: fields.url }));
+      return;
+    }
+
+    const uploadedFile = files.file;
+    const fileInfo = uploadedFile && uploadedFile.data.length > 0 ? store.saveUploadedFile(uploadedFile) : null;
+
+    store.addLink({ title: titleResult.title, url: result.url, file: fileInfo });
     redirect(res, '/');
     return;
   }
@@ -150,6 +182,31 @@ async function handleRequest(req, res) {
       redirect(res, '/');
       return;
     }
+  }
+
+  const downloadMatch = pathname.match(/^\/links\/([^/]+)\/download$/);
+  if (downloadMatch && method === 'GET') {
+    const id = decodeURIComponent(downloadMatch[1]);
+    const link = store.findLink(id);
+    if (!link || !link.file) {
+      res.writeHead(404);
+      res.end('Fichier introuvable');
+      return;
+    }
+    const filePath = store.getUploadedFilePath(link.file);
+    if (!fs.existsSync(filePath)) {
+      res.writeHead(404);
+      res.end('Fichier introuvable');
+      return;
+    }
+    const safeName = link.file.originalName.replace(/[\r\n"]/g, '');
+    res.writeHead(200, {
+      'Content-Type': link.file.contentType,
+      'Content-Disposition': `attachment; filename="${safeName}"`,
+      'Content-Length': link.file.size,
+    });
+    fs.createReadStream(filePath).pipe(res);
+    return;
   }
 
   if (method === 'POST' && pathname === '/logout') {

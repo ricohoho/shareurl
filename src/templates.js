@@ -51,14 +51,24 @@ function loginPage(error) {
 
 function listPage(links) {
   const items = links.length
-    ? links.map((link) => `
+    ? links.map((link) => {
+        const titleHtml = link.title
+          ? `<div class="link-title">${escapeHtml(link.title)}</div>`
+          : '';
+        const fileHtml = link.file
+          ? `<a class="download-link" href="/links/${encodeURIComponent(link.id)}/download">Telecharger : ${escapeHtml(link.file.originalName)}</a>`
+          : '';
+        return `
   <li class="link-row">
+    ${titleHtml}
     <a class="link-url" href="${escapeHtml(link.url)}">${escapeHtml(link.url)}</a>
     <div class="link-meta">
       <span class="link-date">${formatDate(link.createdAt)}</span>
+      ${fileHtml}
       <a class="delete-link" href="/links/${encodeURIComponent(link.id)}/delete">Supprimer</a>
     </div>
-  </li>`).join('\n')
+  </li>`;
+      }).join('\n')
     : '<li class="empty">Aucun lien pour le moment.</li>';
 
   return layout('ShareURL', `
@@ -77,15 +87,23 @@ ${items}
 `);
 }
 
-function addPage(error, prefillUrl) {
+function addPage(opts = {}) {
+  const { error, title, url } = opts;
   const errorHtml = error ? `<p class="error">${escapeHtml(error)}</p>` : '';
   return layout('ShareURL - Ajouter', `
 <div class="container">
   <h1>Ajouter un lien</h1>
   ${errorHtml}
-  <form method="POST" action="/add">
+  <form method="POST" action="/add" enctype="multipart/form-data">
+    <label for="titre">Titre (facultatif, 50 caracteres max)</label>
+    <input type="text" id="titre" name="titre" maxlength="50" value="${escapeHtml(title || '')}" autofocus>
+
     <label for="url">URL</label>
-    <input type="text" id="url" name="url" value="${escapeHtml(prefillUrl || '')}" autofocus>
+    <input type="text" id="url" name="url" value="${escapeHtml(url || '')}">
+
+    <label for="file">Fichier joint (facultatif)</label>
+    <input type="file" id="file" name="file">
+
     <input type="submit" value="Valider">
   </form>
   <p><a href="/">Retour a la liste</a></p>
@@ -94,10 +112,16 @@ function addPage(error, prefillUrl) {
 }
 
 function deleteConfirmPage(link) {
+  const titleHtml = link.title ? `<p class="link-title">${escapeHtml(link.title)}</p>` : '';
+  const fileHtml = link.file
+    ? `<p>Le fichier joint (${escapeHtml(link.file.originalName)}) sera egalement supprime.</p>`
+    : '';
   return layout('ShareURL - Supprimer', `
 <div class="container">
   <h1>Supprimer ce lien ?</h1>
+  ${titleHtml}
   <p class="link-url">${escapeHtml(link.url)}</p>
+  ${fileHtml}
   <form method="POST" action="/links/${encodeURIComponent(link.id)}/delete">
     <input type="submit" value="Confirmer la suppression">
   </form>

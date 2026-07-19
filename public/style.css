@@ -50,7 +50,8 @@ label {
 }
 
 input[type="text"],
-input[type="password"] {
+input[type="password"],
+input[type="file"] {
   width: 100%;
   font-size: 18px;
   padding: 10px;
@@ -76,6 +77,13 @@ input[type="password"] {
   padding: 16px 0;
 }
 
+.link-title {
+  display: block;
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
 .link-url {
   display: block;
   font-size: 20px;
@@ -92,11 +100,15 @@ input[type="password"] {
   margin-right: 16px;
 }
 
-.delete-link {
+.delete-link,
+.download-link {
   color: #000000;
   border: 2px solid #000000;
   padding: 8px 14px;
   text-decoration: none;
+  margin-right: 12px;
+  display: inline-block;
+  margin-top: 8px;
 }
 
 .empty {

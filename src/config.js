@@ -28,6 +28,8 @@ const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true';
 const SESSION_TTL_SECONDS = parseInt(process.env.SESSION_TTL_SECONDS, 10) || 60 * 60 * 24 * 30; // 30 jours
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'links.json');
+const MAX_UPLOAD_MB = parseInt(process.env.MAX_UPLOAD_MB, 10) || 10;
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
 if (!APP_PASSWORD) {
   console.error('Erreur: la variable d\'environnement APP_PASSWORD est requise. Voir .env.example.');
@@ -41,4 +43,6 @@ module.exports = {
   SESSION_TTL_SECONDS,
   DATA_DIR,
   DATA_FILE,
+  MAX_UPLOAD_MB,
+  MAX_UPLOAD_BYTES,
 };
