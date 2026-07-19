@@ -1,0 +1,105 @@
+body {
+  font-family: serif;
+  font-size: 20px;
+  color: #000000;
+  background-color: #ffffff;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  padding: 16px;
+}
+
+h1 {
+  font-size: 28px;
+  margin: 0 0 16px 0;
+}
+
+.top-actions {
+  margin-bottom: 20px;
+}
+
+.button {
+  display: inline-block;
+  padding: 14px 24px;
+  border: 2px solid #000000;
+  color: #000000;
+  text-decoration: none;
+  font-size: 20px;
+}
+
+.logout-form {
+  display: inline;
+  margin-left: 12px;
+}
+
+input[type="submit"],
+.button {
+  font-size: 18px;
+  padding: 12px 20px;
+  border: 2px solid #000000;
+  background-color: #ffffff;
+  color: #000000;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 18px;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  font-size: 18px;
+  padding: 10px;
+  margin-bottom: 16px;
+  border: 2px solid #000000;
+  box-sizing: border-box;
+}
+
+.error {
+  border: 2px solid #000000;
+  padding: 10px;
+  margin-bottom: 16px;
+}
+
+.link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.link-row {
+  border-bottom: 2px solid #000000;
+  padding: 16px 0;
+}
+
+.link-url {
+  display: block;
+  font-size: 20px;
+  color: #000000;
+  word-break: break-all;
+  margin-bottom: 8px;
+}
+
+.link-meta {
+  font-size: 16px;
+}
+
+.link-date {
+  margin-right: 16px;
+}
+
+.delete-link {
+  color: #000000;
+  border: 2px solid #000000;
+  padding: 8px 14px;
+  text-decoration: none;
+}
+
+.empty {
+  padding: 16px 0;
+  font-size: 18px;
+}
